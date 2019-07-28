@@ -121,8 +121,76 @@
     $ rails db:migrate
     ```
 
-11. final
-12. final
+11. Change the rspec file for Todo model. Open `spec/models/todo_spec.rb`
+    ```ruby
+    require 'rails_helper'
 
+    RSpec.describe Todo, type: :model do
+        # Association test
+        # ensure Todo model has a 1:m relationship with the Item model
+        it { should have_many(:items).dependent(:destroy) }
+        # Validation tests
+        # ensure columns title and created_by are present before saving
+        it { should validate_presence_of(:title) }
+        it { should validate_presence_of(:created_by) }
+    end
+    ```
+
+12. Change the rspec file for Item model. Open `spec/models/item_spec.rb`
+    ```ruby
+    require 'rails_helper'
+
+    RSpec.describe Item, type: :model do
+        # Association test
+        # ensure an item record belongs to a single todo record
+        it { should belong_to(:todo) }
+        # Validation test
+        # ensure column name is present before saving
+        it { should validate_presence_of(:name) }
+    end
+    ```
+
+13. Set validation for Todo model Open `app/models/todo.rb`
+    ```ruby
+    class Todo < ApplicationRecord
+        # model association
+        has_many :items, dependent: :destroy
+
+        # validations
+        validates_presence_of :title, :created_by
+    end
+    ```
+
+14. Set validation for Item model Open `app/models/item.rb`
+    ```ruby
+    class Item < ApplicationRecord
+        # model association
+        belongs_to :todo
+
+        # validation
+        validates_presence_of :name
+    end
+    ```
+
+15. Then test it with command :
+    ```
+    $ bundle exec rspec 
+    ```
+
+    the result should be :
+    ```diff
+    .....
+    Finished in 0.24365 seconds (files took 2.05 seconds to load)
+    5 examples, 0 failures
+    ```
+
+    if want to spesific files can run command:
+    ```
+    $ bundle exec rspec spec/models/todo_spec.rb 
+    $ bundle exec rspec spec/models/item_spec.rb 
+    ```
+
+16. next
+18. next
 
 
