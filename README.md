@@ -189,8 +189,204 @@
     $ bundle exec rspec spec/models/todo_spec.rb 
     $ bundle exec rspec spec/models/item_spec.rb 
     ```
+### Controller
+16. Create the Controller
+    ```
+    $ rails g controller Todos
+    $ rails g controller Items
+    ```
 
-16. next
-18. next
+    the results :
+    ```
+    create  app/controllers/todos_controller.rb
+    invoke  rspec
+    create    spec/controllers/todos_controller_spec.rb
+    ```
+    ```
+    create  app/controllers/items_controller.rb
+    invoke  rspec
+    create    spec/controllers/items_controller_spec.rb
+    ```
 
+### Requests Directory
+18. Add a requests folder to the spec directory with the corresponding spec files.
+    ```
+    $ mkdir spec/requests && touch spec/requests/{todos_spec.rb,items_spec.rb} 
+    ```
 
+### Test the Data First
+19. Add the factory files:
+    ```
+    $ touch spec/factories/{todos.rb,items.rb}
+    ```
+
+20. Define the factories.
+    ```ruby
+    # spec/factories/todos.rb
+    FactoryBot.define do
+        factory :todo do
+            title { Faker::Lorem.word }
+            created_by { Faker::Number.number(10) }
+        end
+    end
+    ```
+    ```ruby
+    # spec/factories/items.rb
+    FactoryBot.define do
+        factory :item do
+            name { Faker::StarWars.character }
+            done false
+            todo_id nil
+        end
+    end
+    ```
+
+### Spec fo API Todo
+21. Define Todo API Spec `spec/requests/todos_spec.rb`
+    ```ruby
+    require 'rails_helper'
+
+    # rubocop:disable Metrics/BlockLength
+    RSpec.describe 'Todos API', type: :request do
+    # initialize test data
+    let!(:todos) { create_list(:todo, 10) }
+    let(:todo_id) { todos.first.id }
+
+    # Test suite for GET /todos
+    describe 'GET /todos' do
+        # make HTTP get request before each example
+        before { get '/todos' }
+
+        it 'returns todos' do
+        # Note `json` is a custom helper to parse JSON responses
+        expect(json).not_to be_empty
+        expect(json.size).to eq(10)
+        end
+
+        it 'returns status code 200' do
+        expect(response).to have_http_status(200)
+        end
+    end
+
+    # Test suite for GET /todos/:id
+    describe 'GET /todos/:id' do
+        before { get "/todos/#{todo_id}" }
+
+        context 'when the record exists' do
+        it 'returns the todo' do
+            expect(json).not_to be_empty
+            expect(json['id']).to eq(todo_id)
+        end
+
+        it 'returns status code 200' do
+            expect(response).to have_http_status(200)
+        end
+        end
+
+        context 'when the record does not exist' do
+        let(:todo_id) { 100 }
+
+        it 'returns status code 404' do
+            expect(response).to have_http_status(404)
+        end
+
+        it 'returns a not found message' do
+            expect(response.body).to match(/Couldn't find Todo/)
+        end
+        end
+    end
+
+    # Test suite for POST /todos
+    describe 'POST /todos' do
+        # valid payload
+        let(:valid_attributes) { { title: 'Learn Elm', created_by: '1' } }
+
+        context 'when the request is valid' do
+        before { post '/todos', params: valid_attributes }
+
+        it 'creates a todo' do
+            expect(json['title']).to eq('Learn Elm')
+        end
+
+        it 'returns status code 201' do
+            expect(response).to have_http_status(201)
+        end
+        end
+
+        context 'when the request is invalid' do
+        before { post '/todos', params: { title: 'Foobar' } }
+
+        it 'returns status code 422' do
+            expect(response).to have_http_status(422)
+        end
+
+        it 'returns a validation failure message' do
+            expect(response.body)
+            .to match(/Validation failed: Created by can't be blank/)
+        end
+        end
+    end
+
+    # Test suite for PUT /todos/:id
+    describe 'PUT /todos/:id' do
+        let(:valid_attributes) { { title: 'Shopping' } }
+
+        context 'when the record exists' do
+        before { put "/todos/#{todo_id}", params: valid_attributes }
+
+        it 'updates the record' do
+            expect(response.body).to be_empty
+        end
+
+        it 'returns status code 204' do
+            expect(response).to have_http_status(204)
+        end
+        end
+    end
+
+    # Test suite for DELETE /todos/:id
+    describe 'DELETE /todos/:id' do
+        before { delete "/todos/#{todo_id}" }
+
+        it 'returns status code 204' do
+        expect(response).to have_http_status(204)
+        end
+    end
+    end
+
+    ```
+
+22. We start by populating the database with a list of 10 todo records (factory bot). 
+    We also have a custom helper method json which parses the JSON response to a Ruby Hash 
+    which is easier to work with in our tests. Let's define it in `spec/support/request_spec_helper`.
+    ```
+    $ mkdir spec/support && touch spec/support/request_spec_helper.rb
+    ```
+    
+    then define `spec/support/request_spec_helper.rb`.
+    ```ruby
+    module RequestSpecHelper
+        # Parse JSON response to ruby hash
+        def json
+            JSON.parse(response.body)
+        end
+    end
+    ```
+
+23. The support directory is not autoloaded by default. To enable this:
+    - open the rails helper,
+    - comment out the support directory auto-loading,
+    - then include it as shared module for all request specs in the RSpec configuration block.
+
+24. next
+25. next
+26. next
+27. next
+28. next
+29. next
+30. next
+
+### Note
+- dont do anything for spec_helper
+- run command `gem install faker` for todoitems spec
+- set `let(:json) { JSON(response.body) }` in top of todos_spec and items_spec
