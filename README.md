@@ -378,10 +378,143 @@
     - comment out the support directory auto-loading,
     - then include it as shared module for all request specs in the RSpec configuration block.
 
-24. next
-25. next
-26. next
-27. next
+    simply it means we got `spec/request/todos_spec.rb` and `spec/request/items_spec.rb`,
+    there are variable called `json` which actually return JSON(response.body). We wont it define by local only,
+    we want to set it to global variable, so just define one time.
+
+    open file  `spec/rails_helper.rb` and adding some scripts.
+    ```ruby
+    # [...]
+    Dir[Rails.root.join('spec/support/**/*.rb')].each { |f| require f }
+    # [...]
+    RSpec.configuration do |config|
+        # [...]
+        config.include RequestSpecHelper, type: :request
+        # [...]
+    end
+    ```
+
+24. Then define the rotes `config/routes.rb`.
+    ```ruby
+    Rails.application.routes.draw do
+        # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html
+
+        resources :todos do
+            resources :items
+        end
+    end
+    ```
+    
+    we can check it by run:
+    ```
+    $ rails routes
+    ```
+
+25. Define the Todo Controller `app/controllers/todos_controller.rb`
+    ```ruby
+    class TodosController < ApplicationController
+        before_action :set_todo, only: %i[show update destroy]
+
+        # GET /todos
+        def index
+            @todos = Todo.all
+            json_response(@todos)
+        end
+
+        # POST /todos
+        def create
+            @todo = Todo.create!(todo_params)
+            json_response(@todo, :created)
+        end
+
+        # GET /todos/:id
+        def show
+            json_response(@todo)
+        end
+
+        # PUT /todos/:id
+        def update
+            @todo.update(todo_params)
+            head :no_content
+        end
+
+        # DELETE /todos/:id
+        def destroy
+            @todo.destroy
+            head :no_content
+        end
+
+        private
+
+        def todo_params
+            # whitelist params
+            params.permit(:title, :created_by)
+        end
+
+        def set_todo
+            @todo = Todo.find(params[:id])
+        end
+    end
+    ```
+
+    Create Response `app/controllers/concerns/response.rb`
+    ```ruby
+    module Response
+        def json_response(object, status = :ok)
+            render json: object, status: status
+        end
+    end
+    ```
+
+    set_todo - callback method to find a todo by id. In the case where the record does not exist, 
+    ActiveRecord will throw an exception `ActiveRecord::RecordNotFound`. 
+    We'll rescue from this exception and return a `404` message.
+
+    Create Exception Handler `app/controllers/concerns/exception_handler.rb`
+    ```ruby
+    module ExceptionHandler
+    # provides the more graceful `included` method
+    extend ActiveSupport::Concern
+        included do
+            rescue_from ActiveRecord::RecordNotFound do |e|
+            json_response({ message: e.message }, :not_found)
+            end
+
+            rescue_from ActiveRecord::RecordInvalid do |e|
+            json_response({ message: e.message }, :unprocessable_entity)
+            end
+        end
+    end
+    ```
+
+    in our `create` method in the `TodosController`, note that we're using `create!` instead of `create`. 
+    This way, the model will raise an exception `ActiveRecord::RecordInvalid`. This way, we can avoid deep nested if statements 
+    in the controller. Thus, we rescue from this exception in the `ExceptionHandler` module.
+
+    Update `app/controllers/application_controller.rb`
+    ```ruby
+    class ApplicationController < ActionController::API
+        include Response
+        include ExceptionHandler
+    end
+    ```
+    
+
+26. Then run server and test it:
+    ```ruby
+    $ rails s
+    # GET /todos
+    $ http :3000/todos
+    # POST /todos
+    $ http POST :3000/todos title=Mozart created_by=1
+    # PUT /todos/:id
+    $ http PUT :3000/todos/1 title=Beethoven
+    # DELETE /todos/:id
+    $ http DELETE :3000/todos/1
+    ```
+
+    
+27. TodoItems API
 28. next
 29. next
 30. next
