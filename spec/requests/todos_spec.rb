@@ -5,7 +5,6 @@ RSpec.describe 'Todos API', type: :request do
   # initialize test data
   let!(:todos) { create_list(:todo, 10) }
   let(:todo_id) { todos.first.id }
-  let(:json) { JSON(response.body) }
 
   # Test suite for GET /todos
   describe 'GET /todos' do
